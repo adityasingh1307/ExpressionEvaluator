@@ -10,7 +10,8 @@ import java.awt.event.KeyEvent;
  * Pure Java Swing, no server, no external dependencies.
  *
  * This file contains ZERO evaluation logic — every calculation is
- * delegated to ExpressionEvaluator.evaluate(...) in ExpressionEvaluator.java.
+ * delegated to ExpressionEvaluator.infixToPostfix(...) and
+ * ExpressionEvaluator.evaluatePostfix(...) in ExpressionEvaluator.java.
  *
  * Compile:  javac ExpressionEvaluator.java ExpressionEvaluatorGUI.java
  * Run:      java ExpressionEvaluatorGUI
@@ -116,6 +117,8 @@ public class ExpressionEvaluatorGUI extends JFrame {
         // ---- Result panel -----------------------------------------------
         resultPanel = new JPanel();
         resultPanel.setLayout(new BoxLayout(resultPanel, BoxLayout.Y_AXIS));
+        resultPanel.setBackground(CARD_BG);
+        resultPanel.setOpaque(true);
         resultPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
                 new EmptyBorder(14, 16, 14, 16)
@@ -213,12 +216,17 @@ public class ExpressionEvaluatorGUI extends JFrame {
     }
 
     /**
-     * The only place this file touches the engine: a single call to
-     * ExpressionEvaluator.evaluate(...). All stack logic lives in
+     * The only place this file touches the engine: calls
+     * ExpressionEvaluator.infixToPostfix(...) then
+     * ExpressionEvaluator.evaluatePostfix(...). All stack logic lives in
      * ExpressionEvaluator.java.
+     *
+     * NOTE: this engine (matching your reference code) works on single
+     * characters, so it only supports single-digit numbers, e.g. "2+3"
+     * or "(5+3)*2" -- not "12+7" or decimals like "1.5".
      */
     private void onEvaluate(ActionEvent e) {
-        String expression = expressionField.getText().trim();
+        String expression = expressionField.getText().replaceAll("\\s+", "");
 
         if (expression.isEmpty()) {
             showError("Please enter an expression first.");
@@ -226,24 +234,22 @@ public class ExpressionEvaluatorGUI extends JFrame {
         }
 
         try {
-            double result = ExpressionEvaluator.evaluate(expression);
+            String postfix = ExpressionEvaluator.infixToPostfix(expression);
+            int result = ExpressionEvaluator.evaluatePostfix(postfix);
             showResult(result);
         } catch (Exception ex) {
-            showError(ex.getMessage());
+            showError("Invalid expression. Use single digits only, e.g. (5+3)*2");
         }
     }
 
-    private void showResult(double value) {
-        String display = (value == Math.floor(value) && !Double.isInfinite(value))
-                ? String.valueOf((long) value)
-                : String.valueOf(value);
+    private void showResult(int value) {
+        String display = String.valueOf(value);
 
         resultLabel.setText("RESULT");
         resultLabel.setForeground(SUCCESS);
         resultValueLabel.setFont(new Font("Monospaced", Font.BOLD, 22));
         resultValueLabel.setText(display);
         resultValueLabel.setForeground(TEXT_MAIN);
-        resultPanel.setBackground(Color.BLUE);
         resultPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(SUCCESS, 1, true),
                 new EmptyBorder(14, 16, 14, 16)
